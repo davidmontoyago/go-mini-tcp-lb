@@ -16,6 +16,7 @@ type upstream struct {
 func (u *upstream) releaseConn(conn net.Conn) {
 	u.mux.Lock()
 	defer u.mux.Unlock()
+
 	u.conns = append(u.conns, conn)
 	log.Printf("%s pool status %#v", u.addr, u.conns)
 }
@@ -23,6 +24,7 @@ func (u *upstream) releaseConn(conn net.Conn) {
 func (u *upstream) takeConn() net.Conn {
 	u.mux.Lock()
 	defer u.mux.Unlock()
+
 	if len(u.conns) > 0 {
 		log.Println("capturing connection for ", u.addr)
 		conn := u.conns[0]
@@ -30,6 +32,14 @@ func (u *upstream) takeConn() net.Conn {
 		return conn
 	}
 	return newConn(u.addr)
+}
+
+func (u *upstream) close() {
+	for _, conn := range u.conns {
+		log.Printf("closing conn %#v\n", conn)
+		err := conn.Close()
+		log.Println(err)
+	}
 }
 
 type upstreamManager struct {
@@ -80,5 +90,11 @@ func (u *upstreamManager) close(conn net.Conn) {
 			upstream.releaseConn(conn)
 			break
 		}
+	}
+}
+
+func (u *upstreamManager) cleanUp() {
+	for _, upstream := range u.upstreams {
+		upstream.close()
 	}
 }
