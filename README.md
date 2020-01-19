@@ -15,6 +15,9 @@ nc -lk 9001 & nc -lk 9002 & nc -lk 9003
 # run load balancer
 # go run -race *.go
 
-# run clients
-for i in {1..100}; do echo "hello $i" | nc localhost 9000; done
+# run concurrent clients
+for i in {1..100}; do echo "hello $i" | nc localhost 9000; done & for i in {101..200}; do echo "hello $i" | nc localhost 9000; done
+
+# clean up
+pkill nc -lk
 ```

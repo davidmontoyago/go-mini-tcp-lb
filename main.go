@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"io"
 	"log"
 	"net"
@@ -39,7 +38,6 @@ func handleConnection(conn net.Conn, upstreams *upstreamManager) {
 			if err != io.EOF {
 				log.Fatalln("failed to read from downstream:", err)
 			}
-			fmt.Println(upstreams.connections)
 			break
 		}
 		log.Println("read", bytesRead, "bytes.")
