@@ -10,14 +10,16 @@ From [Introduction to modern network load balancing and proxying](https://blog.e
 
 ```
 # run upstream servers
-nc -lk 9001 & nc -lk 9002 & nc -lk 9003
+while true; do { echo -e "hello back from 9001" | nc -vl 9001; test $? -gt 128 && break; } done &
+    while true; do { echo -e "hello back from 9002" | nc -vl 9002; test $? -gt 128 && break; } done &
+        while true; do { echo -e "hello back from 9003" | nc -vl 9003; test $? -gt 128 && break; } done;
 
 # run load balancer
-# go run -race *.go
+go run -race *.go
 
 # run concurrent clients
 for i in {1..100}; do echo "hello $i" | nc localhost 9000; done & for i in {101..200}; do echo "hello $i" | nc localhost 9000; done
 
 # clean up
-pkill nc -lk
+pkill nc -vl 900
 ```

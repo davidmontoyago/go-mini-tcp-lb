@@ -3,8 +3,10 @@ package main
 import (
 	"log"
 	"net"
+	"strconv"
 	"strings"
 	"sync"
+	"time"
 )
 
 type upstream struct {
@@ -73,14 +75,19 @@ func (u *upstreamManager) next() net.Conn {
 
 func newConn(addr string) net.Conn {
 	log.Println("creating new connection for ", addr)
-	conn, err := net.Dial("tcp", addr)
+	// TODO pass IP
+	port, _ := strconv.Atoi(addr[1:])
+	conn, err := net.DialTCP("tcp", nil, &net.TCPAddr{Port: port})
 	if err != nil {
 		log.Fatalln("unable to connect to upstream:", err)
 	}
+	conn.SetKeepAlive(true)
+	conn.SetKeepAlivePeriod(5 * time.Second)
+	conn.SetDeadline(time.Time{})
 	return conn
 }
 
-func (u *upstreamManager) close(conn net.Conn) {
+func (u *upstreamManager) release(conn net.Conn) {
 	isSameAddr := func(addr string) bool {
 		return strings.HasSuffix(conn.RemoteAddr().String(), addr)
 	}

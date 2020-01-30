@@ -11,7 +11,7 @@ import (
 )
 
 func main() {
-	services := []string{":9001", ":9002", ":9003"}
+	services := []string{":9001"}
 	upstreams := newUpstreamManager(services)
 
 	listener, err := net.Listen("tcp", ":9000")
@@ -40,27 +40,44 @@ func main() {
 	}
 }
 
-func handleConnection(conn net.Conn, upstreams *upstreamManager, waitgroup *sync.WaitGroup) {
-	// release client when done
-	defer conn.Close()
+func handleReq(src net.Conn, dst net.Conn, wg *sync.WaitGroup) {
+	defer wg.Done()
 
-	// get next upstream connection (round robin)
-	upstreamConn := upstreams.next()
-
-	// defers are LIFO stacked
-	defer waitgroup.Done()
-	defer upstreams.close(upstreamConn)
-
-	inputBuf := make([]byte, 1024)
+	buf := make([]byte, 1024)
 	for {
-		bytesRead, err := conn.Read(inputBuf)
+		bytesRead, err := src.Read(buf)
 		if err != nil {
 			if err != io.EOF {
 				log.Fatalln("failed to read from downstream:", err)
 			}
 			break
 		}
-		log.Println("read", bytesRead, "bytes.")
-		upstreamConn.Write(inputBuf[:bytesRead])
+		log.Println("read", bytesRead, "bytes from src.")
+
+		bytesWtn, err := dst.Write(buf[:bytesRead])
+		if err != nil {
+			if err != io.EOF {
+				log.Fatalln("failed to write to upstream", err)
+			}
+			break
+		}
+		log.Println("wrote", bytesWtn, "bytes to dst")
 	}
+}
+
+func handleConnection(clientConn net.Conn, upstreams *upstreamManager, waitgroup *sync.WaitGroup) {
+	// get next upstream connection (round robin)
+	upstreamConn := upstreams.next()
+
+	defer waitgroup.Done()
+	// release upstream connection to the pool
+	defer upstreams.release(upstreamConn)
+	// release client
+	defer clientConn.Close()
+
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go handleReq(clientConn, upstreamConn, &wg)
+	go handleReq(upstreamConn, clientConn, &wg)
+	wg.Wait()
 }
