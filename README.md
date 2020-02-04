@@ -1,6 +1,6 @@
-# go-mini-tcp-lb
+# go-tcp-termination-lb
 
-Prototype termination TCP load balancer with round robin balancing. For learning purposes only.
+Prototype edge/middle termination TCP load balancer with round robin balancing. For learning purposes only.
 
 From [Introduction to modern network load balancing and proxying](https://blog.envoyproxy.io/introduction-to-modern-network-load-balancing-and-proxying-a57f6ff80236):
 
